@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Views</title>
+    <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+    <!--    引入Vue.js-->
+    <link rel="stylesheet" href="https://unpkg.com/element-ui/lib/theme-chalk/index.css">
+    <script src="https://unpkg.com/element-ui/lib/index.js"></script>
+    <!--    引入element-ui样式-->
+</head>
+<body>
+<div id="app">
+    <h2 style="text-align: center">动物识别专家系统</h2>
+    <div id="ruleOld" style="margin-left: 20px;margin-right: 20px;display: flex;justify-content: space-around">
+        <div style="width: 40%;">
+            <el-collapse>
+
+                <el-collapse-item class="collapse" title="点击查看所有默认规则">
+                    <div style="margin-bottom: 5px;" v-for="(rules,index) in rule">R{{index + 1}}：IF
+                        {{conditions[rules[1]]}}
+                        {{rules[2] === 0 ? '' : `AND ${conditions[rules[2]]}`}}
+                        {{rules[3] === 0 ? '' : `AND ${conditions[rules[3]]}`}}
+                        {{rules[4] === 0 ? '' : `AND ${conditions[rules[4]]}`}} THEN {{fact[rules[0]]}}
+                    </div>
+                </el-collapse-item>
+            </el-collapse>
+        </div>
+        <div style="display: flex;flex-direction: column;justify-content: space-between;height: 120px">
+            <el-popover
+                    placement="top-start"
+                    trigger="hover"
+                    close-delay="0"
+                    content="点击添加自定义规则">
+                <el-button slot="reference" @click="openDialog" circle style="width: 50px;height: 50px"
+                           icon="el-icon-plus"></el-button>
+            </el-popover>
+            <el-popover
+                    placement="bottom-start"
+                    close-delay=0
+                    trigger="hover"
+                    content="点击删除某个规则">
+                <el-button @click="openDeleteDialog" slot="reference" circle style="width: 50px;height: 50px"
+                           icon="el-icon-minus"></el-button>
+            </el-popover>
+        </div>
+
+        <div style="width: 40%;">
+            <el-collapse>
+                <el-collapse-item class="collapse" title="点击查看所有自定义规则">
+                    <div style="margin-bottom: 5px;" v-for="(rules,index) in newRule">NR{{index + 1}}：IF
+                        {{conditions[rules[1]]}}
+                        {{rules[2] === 0 ? '' : `AND ${conditions[rules[2]]}`}}
+                        {{rules[3] === 0 ? '' : `AND ${conditions[rules[3]]}`}}
+                        {{rules[4] === 0 ? '' : `AND ${conditions[rules[4]]}`}} THEN {{fact[rules[0]]}}
+                    </div>
+                </el-collapse-item>
+            </el-collapse>
+        </div>
+
+    </div>
+    <p style="margin-left: 20px;">可选特征</p>
+    <div class="fact">
+        <div style="display: inline" v-for="(fact,index) in conditions" v-if="index>=1">
+            <el-button class="fact_item" plain @click="addInSelectRule(index,fact)">{{fact}}</el-button>
+        </div>
+    </div>
+    <p style="margin-left: 20px;">已选特征</p>
+    <div class="select">
+        <div style="display: inline" v-for="(fact,index) in selectRuleName">
+            <el-button class="fact_item" plain @click="deleteFact(fact,index)">{{fact}}</el-button>
+        </div>
+    </div>
+
+    <div class="button">
+        <el-button type="primary" plain v-on:click="match()">推理</el-button>
+        <el-button type="primary" plain v-on:click="resetSelect()">重置</el-button>
+    </div>
+    <p style="margin-left: 20px;">推理结果</p>
+    <div class="result" v-for="animal in reasoningResult" style="margin-bottom: 50px;">
+        {{animal}}
+    </div>
+
+
+    <el-dialog title="添加规则" :visible.sync="dialogVisible" width="75%">
+        <div style="display: flex;justify-content: space-between;align-content: space-between">
+            <el-select v-model="rulesValue1" placeholder="请选择条件1" style="margin-right: 10px;">
+                <el-option
+                        v-for="item in pickRules"
+                        :key="item.value"
+                        :label="item.label"
+                        :value="item.value">
+                </el-option>
+            </el-select>
+            <el-select v-model="rulesValue2" placeholder="请选择条件2" style="margin-right: 10px;">
+                <el-option
+                        v-for="item in pickRules"
+                        :key="item.value"
+                        :label="item.label"
+                        :value="item.value">
+                </el-option>
+            </el-select>
+            <el-select v-model="rulesValue3" placeholder="请选择条件3" style="margin-right: 10px;">
+                <el-option
+                        v-for="item in pickRules"
+                        :key="item.value"
+                        :label="item.label"
+                        :value="item.value">
+                </el-option>
+            </el-select>
+            <el-select v-model="rulesValue4" placeholder="请选择条件4" style="margin-right: 10px;">
+                <el-option
+                        v-for="item in pickRules"
+                        :key="item.value"
+                        :label="item.label"
+                        :value="item.value">
+                </el-option>
+            </el-select>
+            <el-select v-model="rulesValue5" placeholder="请选择条件5">
+                <el-option
+                        v-for="item in pickRules"
+                        :key="item.value"
+                        :label="item.label"
+                        :value="item.value">
+                </el-option>
+            </el-select>
+
+        </div>
+
+        <div style="display:flex;justify-content: center;margin-top: 20px;">
+            <el-select v-model="resultValue" placeholder="请选择结果">
+                <el-option
+                        v-for="item in result"
+                        :key="item.value"
+                        :label="item.label"
+                        :value="item.value">
+                </el-option>
+            </el-select>
+        </div>
+        <div class="button">
+            <el-button style="width: 100%" type="primary" v-on:click="addRule()">确认添加</el-button>
+        </div>
+    </el-dialog>
+
+    <el-dialog title="删除规则" :visible.sync="dialogVisibleDelete">
+        <div>
+            <div style="margin-bottom: 10px" v-for="(rules,index) in rule">R{{index + 1}}：IF {{conditions[rules[1]]}}
+                {{rules[2] === 0 ? '' : `AND ${conditions[rules[2]]}`}}
+                {{rules[3] === 0 ? '' : `AND ${conditions[rules[3]]}`}}
+                {{rules[4] === 0 ? '' : `AND ${conditions[rules[4]]}`}} THEN {{fact[rules[0]]}}
+                <el-button type="text" icon="el-icon-close" @click="deleteDefaultRules(index)" circle
+                           size="mini"></el-button>
+            </div>
+            <div v-for="(rules,index) in newRule">NR{{index + 1}}：IF {{conditions[rules[1]]}}
+                {{rules[2] === 0 ? '' : `AND ${conditions[rules[2]]}`}}
+                {{rules[3] === 0 ? '' : `AND ${conditions[rules[3]]}`}}
+                {{rules[4] === 0 ? '' : `AND ${conditions[rules[4]]}`}} THEN {{fact[rules[0]]}}
+                <el-button type="text" icon="el-icon-close" @click="deleteNewRules(index)" circle
+                           size="mini"></el-button>
+            </div>
+        </div>
+    </el-dialog>
+</div>
+</body>
+<script>
+    new Vue({
+        el: '#app',
+        data() {
+            return {
+                dialogVisible: false,
+                dialogVisibleDelete: false,
+                conditions: [
+                    "", "有毛发", "有奶", "有羽毛", "会飞",
+                    "会生蛋", "吃肉", "有锋利牙齿", "有爪", "眼向前方",
+                    "有蹄类动物", "反刍", "有黄褐色皮毛", "有暗斑点", "有黑色条纹",
+                    "有长脖子", "有长腿", "不会飞", "会游泳", "有黑白二色",
+                    "善飞", "哺乳动物", "鸟", "食肉动物", "有蹄"
+                ],
+                fact: [
+                    "", "哺乳动物", "鸟", "食肉动物", "有蹄类动物", "豹", "虎", "长颈鹿",
+                    "斑马", "鸵鸟", "企鹅", "信天翁"
+                ],
+                rule: [
+                    [1, 1, 0, 0, 0, 0],
+                    [1, 2, 0, 0, 0, 0],
+                    [2, 3, 0, 0, 0, 0],
+                    [2, 4, 5, 0, 0, 0],
+                    [3, 6, 0, 0, 0, 0],
+                    [3, 7, 8, 9, 0, 0],
+                    [4, 21, 24, 0, 0, 0],
+                    [4, 21, 11, 0, 0, 0],
+                    [5, 21, 23, 12, 13, 0],
+                    [6, 21, 23, 12, 14, 0],
+                    [7, 24, 15, 16, 13, 0],
+                    [8, 24, 14, 0, 0, 0],
+                    [9, 22, 15, 16, 17, 19],
+                    [10, 22, 18, 17, 19, 0],
+                    [11, 22, 20, 0, 0, 0],
+                ],
+                selectRuleName: [],
+                selectRule: [],
+                reasoningResult: [],
+                newRule: [],
+                result: [{
+                    value: '1',
+                    label: '哺乳动物'
+                }, {
+                    value: '2',
+                    label: '鸟'
+                }, {
+                    value: '3',
+                    label: '食肉动物'
+                }, {
+                    value: '4',
+                    label: '有蹄类动物'
+                }, {
+                    value: '5',
+                    label: '豹'
+                }, {
+                    value: '6',
+                    label: '虎'
+                }, {
+                    value: '7',
+                    label: '长颈鹿'
+                }, {
+                    value: '8',
+                    label: '斑马'
+                }, {
+                    value: '9',
+                    label: '鸵鸟'
+                }, {
+                    value: '10',
+                    label: '企鹅'
+                }, {
+                    value: '11',
+                    label: '信天翁'
+                }],
+                pickRules: [{
+                    value: '1',
+                    label: '有毛发'
+                }, {
+                    value: '2',
+                    label: '有奶'
+                }, {
+                    value: '3',
+                    label: '有羽毛'
+                }, {
+                    value: '4',
+                    label: '会飞'
+                }, {
+                    value: '5',
+                    label: '会生蛋'
+                }, {
+                    value: '6',
+                    label: '吃肉'
+                }, {
+                    value: '7',
+                    label: '有锋利牙齿'
+                }, {
+                    value: '8',
+                    label: '有爪'
+                }, {
+                    value: '9',
+                    label: '眼向前方'
+                }, {
+                    value: '10',
+                    label: '有蹄类动物'
+                }, {
+                    value: '11',
+                    label: '反刍'
+                }, {
+                    value: '12',
+                    label: '有黄褐色皮毛'
+                }, {
+                    value: '13',
+                    label: '有暗斑点'
+                }, {
+                    value: '14',
+                    label: '有黑色条纹'
+                }, {
+                    value: '15',
+                    label: '有长脖子'
+                }, {
+                    value: '16',
+                    label: '有长腿'
+                }, {
+                    value: '17',
+                    label: '不会飞'
+                }, {
+                    value: '18',
+                    label: '会游泳'
+                }, {
+                    value: '19',
+                    label: '有黑白二色'
+                }, {
+                    value: '20',
+                    label: '善飞'
+                }, {
+                    value: '21',
+                    label: '哺乳动物'
+                }, {
+                    value: '22',
+                    label: '鸟'
+                }, {
+                    value: '23',
+                    label: '食肉动物'
+                },{
+                    value: '24',
+                    label: '有蹄'
+                }],
+                resultValue: '',
+                rulesValue1: '',
+                rulesValue2: '',
+                rulesValue3: '',
+                rulesValue4: '',
+                rulesValue5: '',
+            }
+        },
+        methods: {
+            openDialog() {
+                this.dialogVisible = true
+            },
+            openDeleteDialog() {
+                this.dialogVisibleDelete = true
+            },
+            resetSelect() {
+                this.selectRuleName = []
+                this.selectRule = []
+                this.reasoningResult = []
+            },
+            addInSelectRule: function (index, name) {
+                if (this.selectRuleName.indexOf(name) === -1) {
+                    this.selectRuleName.push(name)
+                    this.selectRule.push(index)
+                    console.log(index, name)
+                }
+            },
+            deleteFact(fact) {
+                console.log(fact, this.conditions.indexOf(fact))
+                this.selectRuleName.splice(this.selectRuleName.indexOf(fact), 1)
+                const index = this.conditions.indexOf(fact)
+                this.selectRule.splice(this.selectRule.indexOf(index), 1)
+            },
+            match() {
+                // console.log('selectRuleName',this.selectRuleName)
+                // console.log('selectRule',this.selectRule)
+                let count = 0
+                let flag = true
+                const totalRules = [...this.rule, ...this.newRule]
+                console.log(totalRules)
+                for (let i = 0; i < totalRules.length; i++) {//遍历每一条默认规则
+
+                    // console.log('rule[i]',this.rule[i]);//输出当前遍历的默认规则
+                    for (let j = 0; j < this.selectRule.length; j++) {
+                        //遍历选择的所有条件
+                        // console.log('selectRule[j]',this.selectRule[j])
+                        //输出当前遍历的条件
+
+                        for (let k = 1; k < totalRules[k].length; k++) {//第一个是结果，不用遍历
+                            //遍历当前默认规则的每一个条件
+                            // console.log('rule[i][k]',this.rule[i][k])
+                            //输出当前遍历的条件
+                            if (this.selectRule[j] === totalRules[i][k]) {
+                                ++count//当前默认规则里有这个条件，count+1
+                            }
+                        }
+                    }
+                    // console.log('count',count)
+                    if (this.selectRule.length === count) {
+                        // console.log(this.fact[this.rule[i][0]]);//输出这条默认规则的结果
+                        if (this.reasoningResult.indexOf(this.fact[totalRules[i][0]]) === -1) {
+                            this.reasoningResult.push(this.fact[totalRules[i][0]])
+                        }
+                        flag = false
+                    }
+                    count = 0
+                }
+                if (flag) {
+                    this.reasoningResult = ["无匹配"];
+                    return 0
+                }
+                this.$nextTick(function () {
+                    window.scrollTo(0, document.body.scrollHeight)
+                })
+            },
+            addRule() {
+                if (this.resultValue === '' && this.rulesValue2 === '' && this.rulesValue1 === '' && this.rulesValue3 === '' && this.rulesValue4 === '' && this.rulesValue5 === '') {
+                    this.$message({
+                        message: '请选择结果及条件！！',
+                        type: 'error'
+                    })
+                    return
+                }
+                // console.log(this.rulesValue1===''?0:parseInt(this.rulesValue1))
+                this.newRule.push([
+                    this.resultValue === '' ? 0 : parseInt(this.resultValue),
+                    this.rulesValue1 === '' ? 0 : parseInt(this.rulesValue1),
+                    this.rulesValue2 === '' ? 0 : parseInt(this.rulesValue2),
+                    this.rulesValue3 === '' ? 0 : parseInt(this.rulesValue3),
+                    this.rulesValue4 === '' ? 0 : parseInt(this.rulesValue4),
+                    this.rulesValue5 === '' ? 0 : parseInt(this.rulesValue5)
+                ])
+                console.log(this.newRule)
+                this.$message({
+                    message: '添加成功！',
+                    type: 'success'
+                });
+                // console.log(this.resultValue,
+                //     this.rulesValue1,
+                //     this.rulesValue2,
+                //     this.rulesValue3,
+                //     this.rulesValue4,
+                //     this.rulesValue5)
+                this.dialogVisible = false
+                this.resultValue = ''
+                this.rulesValue1 = ''
+                this.rulesValue2 = ''
+                this.rulesValue3 = ''
+                this.rulesValue4 = ''
+                this.rulesValue5 = ''
+            },
+            deleteDefaultRules(index) {
+                console.log(index)
+                this.rule.splice(index, 1)
+                this.$message({
+                    message: '删除成功！',
+                    type: 'success'
+                })
+            },
+            deleteNewRules(index) {
+                this.newRule.splice(index, 1)
+                this.$message({
+                    message: '删除成功！',
+                    type: 'success'
+                })
+            }
+        }
+    })
+</script>
+<style>
+    .fact {
+        margin: 10px auto auto;
+        padding: 0 30px;
+    }
+
+    .fact_item {
+        margin: 5px;
+    }
+
+    .select {
+        margin: 10px auto auto;
+        padding: 0 30px;
+    }
+
+    .button {
+        display: flex;
+        justify-content: center;
+        width: 100%;
+        margin: 20px auto 20px;
+    }
+
+    .result {
+        margin: auto auto 20px;
+        padding: 0 30px;
+        text-align: center;
+    }
+</style>
+</html>
